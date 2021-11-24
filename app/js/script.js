@@ -1,154 +1,191 @@
 const img = document.querySelector(".img")
 const url = "https://image.tmdb.org/t/p/original/"
-// let apiTest = "https://api.themoviedb.org/3/discover/movie?sort_by=popularity.desc&video=true&api_key=788d8d340536c97e76b580d97ee6c8cc"
-let apiTest = "https://api.themoviedb.org/3/movie/popular?api_key=788d8d340536c97e76b580d97ee6c8cc&language=en-US"
+let apiPopular = "https://api.themoviedb.org/3/movie/popular?api_key=788d8d340536c97e76b580d97ee6c8cc&language=en-US"
 let searchApi = "https://api.themoviedb.org/3/search/movie?&api_key=788d8d340536c97e76b580d97ee6c8cc&query="
+let apiTest = "http://api.themoviedb.org/3/discover/movie?sort_by=vote_average.desc&vote_average.lte=10&vote_count.gte=1000&vote_count.lte=10000&api_key=788d8d340536c97e76b580d97ee6c8cc&with_genres="
 const form = document.getElementById("form")
 const search = document.getElementById("search")
-const main = document.querySelector(".main")
+const main = document.querySelector(".start")
 const apiGenres = "https://api.themoviedb.org/3/genre/movie/list?api_key=788d8d340536c97e76b580d97ee6c8cc&language=en-US"
 let genreTypes = [], pages = 0, pageGenresArr = [], genreMemory = [], pageCounter = 1, n = 0, genreControl = 0
+let genreTitleFlag = 0;
+let genreOverlay = document.createElement("div"); genreOverlay.className = 'genre__overlay';
+let movieContainer = document.createElement("div");
+let genreTitles = [], currentGenre = 0
+let copyListener = 0, genreVar = 0, genreVarName = ''
+fetchHandler(apiPopular)
 fetchHandler(apiGenres)
-fetchHandler(apiTest)
+
+
 async function fetchHandler(api) {
     const response = await fetch(api)
-    // console.log(response)
     const data = await response.json()
-    // console.log(data)
-    if(data.genres ) {genreTypes = data.genres, console.log(genreTypes)}
-   
-    if(data.total_pages) {pages = data.total_pages  /*console.log(pages)*/}
-    
-    if(data.results) getGenres(data.results)
-    // ClickListener()
+
+    if (data.genres) { genreTypes = data.genres, fetchHandler(apiTest + genreTypes[0].id) }
+    localStorage.setItem("names", JSON.stringify(genreTypes));
+
+    if (data.total_pages == 500) fillSlider(data.results)
+    if (data.total_pages < 500) getGenres(data.results)
+
 }
 
-
-
-function getGenres(movie){
-    // console.log(movie)
-    // console.log(genreMemory.length)
-    
+function getGenres(movie) {
+    copyListener = 0
     movie.forEach(el => {
-        if( genreTypes[n].id == el.genre_ids[0] && genreControl<4) genreMemory.push(el), genreControl++
+        if (genreControl < 4) {
+            genreMemory.push(el)
+            genreControl++
+        }
     })
-    if(genreControl<4) { 
-        if(pageCounter<pages){ 
-            pageCounter++, 
-            fetchHandler(apiTest+"&page="+pageCounter)
-            }
-        }
-    else{ 
-       if(n == genreTypes.length-1) {
-            movieList(genreMemory)
-        }
-        else{
-            n++, genreControl = 0, fetchHandler(apiTest)
-        }
-}
-    // console.log(genreMemory)
-    
-
+    if (currentGenre == genreTypes.length - 1) {
+        movieList(genreMemory)
+    }
+    else {
+        currentGenre++
+        genreControl = 0
+        fetchHandler(apiTest + genreTypes[currentGenre].id)
+    }
 }
 
-function movieList(movies){
-    arr = movies
-    console.log(movies)
-    // main.innerHTML = ''
-    movies.forEach(movie => {
-        const { poster_path, title, vote_average } = movie
-        let voteColor;
+function movieList(movies) {
+
+    for (let i = 0; i < movies.length; i++) {
+        const { poster_path, title } = movies[i]
         let movieDiv = document.createElement("div")
-        movieDiv.className = "movie"
-        movieDiv.idf = movie.id
-        if (vote_average >= 8) voteColor = "rgb(129, 221, 105)"
-        else if (vote_average >= 6 && vote_average < 8) voteColor = "rgb(245, 175, 70)"
-        else voteColor = "rgb(221, 36, 36)"
+        movieDiv.className = "genre__movie"
+        movieDiv.idf = movies[i].id
         movieDiv.innerHTML = `
                 <img
                     src="${url + poster_path}"
                     alt="${title}"
                     class="poster"
                 />
-                <div class="info">
-                    <div class="title">${title}</div>
-                    <div class="vote" style="color: ${voteColor}">${vote_average}</div>
-                </div>
+               
             `;
-        main.appendChild(movieDiv)
-        
-    });
-    ClickListener()
-}
-
-function popupCreate(picked) {
-    arr.forEach(element => {
-        if (picked == element.id) {
-            let popupContainer = document.createElement('div');
-            let popupInfo = document.createElement('div');
-            let popupTitle = document.createElement('div');
-            let popupImg = document.createElement('img');
-            let popupImgContainer = document.createElement('div');
-            let popupButton = document.createElement('button');
-            let popupInfoTitle = document.createElement('p');
-            popupButton.type = "button", popupButton.className = 'popup__btn', popupButton.innerHTML = "X"
-            popupInfo.className = "popup__info";
-            popupContainer.className = "popup";
-            popupImgContainer.className = "popup__imgcontainer";
-            popupImg.className = "popup__img";
-            popupImg.src = url + element.poster_path;
-            popupInfoTitle.innerHTML = element.title
-            popupInfo.innerHTML = element.overview
-            popupTitle.className = "popup__title";
-            popupImgContainer.appendChild(popupImg);
-            let overlay = document.querySelector(".overlay")
-            overlay.style.visibility = "visible"
-            overlay.style.animation = "opAnimation 0.5s ease-out"
-            popupContainer.style.animation = "opAnimation 0.5s ease-out"
-            buttonListener(popupButton, popupContainer, overlay)
-            popupContainer.appendChild(popupImgContainer);
-            popupTitle.appendChild(popupInfoTitle)
-            popupTitle.appendChild(popupButton)
-            popupContainer.appendChild(popupTitle);
-            popupContainer.appendChild(popupInfo);
-            main.appendChild(popupContainer)
+        if (genreTitleFlag < 4) {
+            movieContainer.appendChild(movieDiv)
+            genreTitleFlag++
+        }
+        if (genreTitleFlag == 4) {
+            let ref = document.createElement("a")
+            ref.className = "genre__ref"
+            ref.href = "catalog.html"
+            genreOverlay.innerHTML = genreTypes[n].name
+            genreOverlay.appendChild(ref)
+            movieContainer.appendChild(genreOverlay)
+            let movieContainerOriginal = movieContainer.cloneNode(true)
+            movieContainerOriginal.className = "movie__container"
+            main.append(movieContainerOriginal)
+            movieContainer.innerHTML = ''
+            genreOverlay.innerHTML = ''
+            n++
+            genreTitleFlag = 0
         }
     }
-
-    )
+    console.log(genreTypes)
+    refsListener()
+    popularListener()
+}
+function refsListener() {
+    setTimeout(() => {
+        let refs = document.querySelectorAll(".genre__ref")
+        for (let i = 0; i < refs.length; i++) {
+            refs[i].addEventListener('click', function () {
+                genreVar = genreTypes[i].id;
+                genreVarName = genreTypes[i].name
+                localStorage.setItem("name", genreVarName)
+                localStorage.setItem("genre", genreVar)
+            })
+        }
+    }, 1000)
 }
 
-function buttonListener(btn, popupContainer, overlay) {
-    btn.addEventListener("click", () => {
-        popupContainer.style.animation = "opCloseAnimation 0.5s ease-out"
-        overlay.style.animation = "opCloseAnimation 0.5s ease-out"
-        setTimeout(function(){
-            popupContainer.style.visibility = "hidden"
-            overlay.style.visibility = "hidden"
-        }, 450)
-        
-    })
-}
+
+
 
 form.addEventListener("submit", (e) => {
     e.preventDefault()
     const searchTerm = search.value
     if (searchTerm) {
-        fetchHandler(searchApi + searchTerm)
-        // ClickListener()
+        localStorage.setItem("search", searchApi + searchTerm)
+        window.location.href = 'catalog.html'
         search.value = ''
     }
 })
 
-function ClickListener(){
-   
-    setTimeout(function(){
-        let movieArr = document.querySelectorAll(".movie")
-        movieArr.forEach(el => {
-            el.addEventListener("click", () => {
-                popupCreate(el.idf)
-    
+let popularInfo = []
+
+function fillSlider(result) {
+    let sliderImg = document.querySelectorAll(".carousel-item")
+    for (let i = 0; i < sliderImg.length; i++) {
+        let caption = document.createElement('div')
+        caption.className = "carousel-caption"
+        let imgs = document.createElement('img')
+        let linkPopular = document.createElement('a')
+        let popularT = document.querySelector(".popular__title")
+        let popularD = document.querySelector(".popular__desc")
+        linkPopular.href = "catalog.html"
+        linkPopular.className = "link__popular"
+        imgs.src = "" + url + result[i].poster_path + ""
+        popularT.innerHTML = result[0].title
+        popularD.innerHTML = result[0].overview
+        popularInfo.push([result[i].title, result[i].overview])
+
+        linkPopular.appendChild(imgs)
+        sliderImg[i].appendChild(linkPopular)
+
+    }
+}
+let popularCount = 0
+
+function popularListener() {
+    setTimeout(() => {
+        let popular = document.querySelectorAll(".link__popular")
+        for (let i = 0; i < popular.length; i++) {
+            popular[i].addEventListener('click', function () {
+                localStorage.setItem("popular", apiPopular)
             })
-        })
+        }
     }, 1000)
 }
+
+let observer = new MutationObserver(function (mutations) {
+    for (let i = 0; i < mutations.length; i++) {
+        let asd = mutations[i].target.classList.contains('active')
+        
+        if (asd) {
+           
+            popularCount++
+            if (popularCount >= 10) popularCount = 0
+            let popularT = document.querySelector(".popular__title")
+            let popularD = document.querySelector(".popular__desc")
+
+            popularT.innerHTML = popularInfo[popularCount][0]
+            
+            if(popularInfo[popularCount][1].length>250 && window.innerWidth>600){
+                popularD.innerHTML =  popularInfo[popularCount][1].substring(0,250) + "..."
+            }
+            if(popularInfo[popularCount][1].length>240 && window.innerWidth<600){
+                popularD.innerHTML =  popularInfo[popularCount][1].substring(0,240) + "..."
+            }
+            else if(popularInfo[popularCount][1].length>250)
+            {
+                popularD.innerHTML = popularInfo[popularCount][1].substring(0,350) + "..."
+            }
+            else{
+                popularD.innerHTML = popularInfo[popularCount][1]
+            }
+          
+        }
+        break
+    }
+})
+
+
+
+let slide = document.querySelectorAll(".carousel-item")
+for (let i = 0; i < slide.length; i++) {
+    observer.observe(slide[i], { attributes: true });
+}
+
+
